@@ -19,14 +19,12 @@ public class InterviewSlot {
     @Column(nullable = false)
     private LocalDateTime endTime;
 
-    // "AVAILABLE" or "BOOKED"
     @Column(nullable = false)
-    private String status; 
+    private String status;
 
-    private Long interviewerId; // ID of the person conducting
-    private Long candidateId;   // ID of the person booking (can be null)
+    private Long interviewerId;
+    private Long candidateId;
 
-    // CRITICAL: Handles Race Conditions 
     @Version
     private Integer version;
 }

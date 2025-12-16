@@ -25,7 +25,6 @@ public class ConcurrencyTest {
 
     @Test
     public void testRaceCondition() throws InterruptedException {
-        // 1. SETUP: Create a fresh slot in the DB
         InterviewSlot slot = new InterviewSlot();
         slot.setStartTime(LocalDateTime.now().plusDays(1));
         slot.setEndTime(LocalDateTime.now().plusDays(1).plusHours(1));
@@ -36,13 +35,11 @@ public class ConcurrencyTest {
         
         final Long slotId = slot.getId();
 
-        // 2. SIMULATE: Two threads (users) running at the same time
         ExecutorService executor = Executors.newFixedThreadPool(2);
-        CountDownLatch latch = new CountDownLatch(2); // Wait for both threads to be ready
+        CountDownLatch latch = new CountDownLatch(2);
         AtomicInteger successCount = new AtomicInteger(0);
         AtomicInteger failCount = new AtomicInteger(0);
 
-        // User A Task
         Runnable userA = () -> {
             try {
                 bookingService.bookSlot(slotId, 101L);
@@ -54,7 +51,6 @@ public class ConcurrencyTest {
             }
         };
 
-        // User B Task
         Runnable userB = () -> {
             try {
                 bookingService.bookSlot(slotId, 102L);
@@ -66,14 +62,11 @@ public class ConcurrencyTest {
             }
         };
 
-        // 3. EXECUTE: Fire both at once
         executor.execute(userA);
         executor.execute(userB);
 
-        // Wait for both to finish
         latch.await(); 
 
-        // 4. ASSERT: Only ONE should succeed, the other MUST fail
         System.out.println("Successes: " + successCount.get());
         System.out.println("Failures: " + failCount.get());
 

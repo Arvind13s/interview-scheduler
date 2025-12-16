@@ -13,12 +13,9 @@ public class Availability {
 
     private Long interviewerId;
     
-    // e.g., "MONDAY", "TUESDAY"
-    private String dayOfWeek; 
+    private String dayOfWeek;
     
-    // e.g., 09:00:00
-    private LocalTime startTime; 
+    private LocalTime startTime;
     
-    // e.g., 12:00:00
     private LocalTime endTime; 
 }

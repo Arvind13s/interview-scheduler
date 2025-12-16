@@ -22,14 +22,12 @@ public class SlotController {
         return ResponseEntity.ok("Slots generated for the next 14 days!");
     }
 
-    // 2. Book a slot (Race condition handled here) 
     @PostMapping("/{slotId}/book")
     public ResponseEntity<?> bookSlot(@PathVariable Long slotId, @RequestParam Long candidateId) {
         try {
             InterviewSlot bookedSlot = bookingService.bookSlot(slotId, candidateId);
             return ResponseEntity.ok(bookedSlot);
         } catch (ObjectOptimisticLockingFailureException e) {
-            // This is the "Proper Error handling" for race conditions 
             return ResponseEntity.status(409).body("Error: This slot was just taken by someone else.");
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());

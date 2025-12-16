@@ -26,7 +26,6 @@
 
         .container { max-width: 900px; margin: 0 auto; }
         
-        /* Control Panel */
         .controls {
             background: white; padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem;
             box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); border-left: 5px solid var(--secondary);
@@ -36,7 +35,6 @@
         
         .btn-action { background-color: var(--secondary); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; }
 
-        /* Grid & Cards */
         .slots-grid {
             display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;
         }
@@ -47,12 +45,10 @@
             display: flex; flex-direction: column; justify-content: space-between; position: relative;
         }
         
-        /* Highlight card when it's the source of a reschedule */
         .card.swapping-source { border: 2px solid var(--warning); background-color: #fffbeb; }
 
         .time-badge { background: #e0e7ff; color: var(--primary); padding: 4px 12px; border-radius: 20px; font-weight: 600; font-size: 0.85rem; }
 
-        /* Buttons */
         .btn {
             background-color: var(--primary); color: white; border: none; padding: 10px; border-radius: 8px; font-weight: 600; cursor: pointer; width: 100%; margin-top: 1rem;
         }
@@ -61,10 +57,9 @@
         .btn-reschedule {
             background-color: var(--warning); color: white; border: none; padding: 8px; 
             border-radius: 8px; font-weight: 600; cursor: pointer; width: 100%; margin-top: 10px;
-            display: none; /* Hidden by default */
+            display: none;
         }
 
-        /* Toast */
         #toast {
             visibility: hidden; min-width: 250px; background-color: #333; color: #fff; text-align: center; border-radius: 8px; padding: 16px; position: fixed; z-index: 99; left: 50%; bottom: 30px; transform: translateX(-50%);
         }
@@ -98,9 +93,8 @@
 <script>
     let lastCursorId = 0;
     const candidateId = 101; 
-    let activeRescheduleSourceId = null; // Stores the ID of the slot we want to move FROM
+    let activeRescheduleSourceId = null;
 
-    // --- 1. ADMIN: Generate Slots ---
     async function generateSlots() {
         const id = document.getElementById('interviewerId').value;
         showToast("Generating slots...", false);
@@ -113,7 +107,6 @@
         } catch (e) { showToast(e.message, true); }
     }
 
-    // --- 2. LOAD SLOTS ---
     async function loadMore() {
         try {
             const res = await fetch(`/api/slots/available?cursor=${lastCursorId}&limit=6`);
@@ -152,18 +145,14 @@
         } catch (e) { console.error(e); }
     }
 
-    // --- 3. LOGIC CONTROLLER ---
     function handleMainAction(slotId) {
         if (activeRescheduleSourceId) {
-            // If we are in "Swap Mode", this click means "Swap TO here"
             performSwap(activeRescheduleSourceId, slotId);
         } else {
-            // Normal booking
             performBooking(slotId);
         }
     }
 
-    // Step A: User clicks "Book"
     async function performBooking(slotId) {
         const btn = document.getElementById(`btn-main-${slotId}`);
         btn.innerText = "Booking...";
@@ -177,11 +166,11 @@
         } catch (e) { showToast(e.message, true); btn.innerText = "Select Slot"; }
     }
 
-    // Step B: User clicks "Reschedule This" on a booked slot
+    
     function activateRescheduleMode(slotId) {
         activeRescheduleSourceId = slotId;
         
-        // UI Updates to show we are swapping
+        
         document.getElementById(`card-${slotId}`).classList.add('swapping-source');
         document.getElementById('status-bar').style.display = 'block';
         document.getElementById('swap-source-id').innerText = slotId;
@@ -189,9 +178,9 @@
         showToast("Select any NEW slot to swap.", false);
     }
 
-    // Step C: User clicks a new slot to finalize the swap
+    
     async function performSwap(oldId, newId) {
-        if (oldId === newId) return; // Can't swap with self
+        if (oldId === newId) return; 
 
         const newBtn = document.getElementById(`btn-main-${newId}`);
         newBtn.innerText = "Swapping...";
@@ -201,13 +190,13 @@
             if (res.ok) {
                 showToast(`Swapped #${oldId} for #${newId}`, false);
                 
-                // 1. Reset the OLD card (Make it look available again)
+                
                 resetOldCard(oldId);
 
-                // 2. Mark the NEW card as booked
+                
                 markSlotAsBooked(newId);
 
-                // 3. Clear global state
+               
                 activeRescheduleSourceId = null;
                 document.getElementById('status-bar').style.display = 'none';
             } else throw new Error(await res.text());
@@ -217,14 +206,14 @@
         }
     }
 
-    // --- HELPER UI FUNCTIONS ---
+    
     function markSlotAsBooked(id) {
-        // Change Main Button
+        
         const mainBtn = document.getElementById(`btn-main-${id}`);
         mainBtn.innerText = "Booked ✅";
         mainBtn.disabled = true;
         
-        // Show Reschedule Button
+       
         const resBtn = document.getElementById(`btn-reschedule-${id}`);
         resBtn.style.display = "block";
     }
@@ -234,12 +223,12 @@
         if (card) {
             card.classList.remove('swapping-source');
             
-            // Reset Main Button
+           
             const mainBtn = document.getElementById(`btn-main-${id}`);
             mainBtn.innerText = "Select Slot";
             mainBtn.disabled = false;
 
-            // Hide Reschedule Button
+           
             const resBtn = document.getElementById(`btn-reschedule-${id}`);
             resBtn.style.display = "none";
         }
