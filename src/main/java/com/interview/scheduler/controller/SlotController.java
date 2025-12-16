@@ -1,0 +1,55 @@
+package com.interview.scheduler.controller;
+
+import com.interview.scheduler.model.InterviewSlot;
+import com.interview.scheduler.service.BookingService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/slots")
+public class SlotController {
+
+    @Autowired
+    private BookingService bookingService;
+
+    // 1. Get available slots
+    @GetMapping("/available")
+    public List<InterviewSlot> getAvailableSlots() {
+        return bookingService.getAllAvailableSlots();
+    }
+
+    @PostMapping("/generate/{interviewerId}")
+    public ResponseEntity<String> generateSlots(@PathVariable Long interviewerId) {
+        bookingService.generateSlotsForInterviewer(interviewerId);
+        return ResponseEntity.ok("Slots generated for the next 14 days!");
+    }
+
+    // 2. Book a slot (Race condition handled here) 
+    @PostMapping("/{slotId}/book")
+    public ResponseEntity<?> bookSlot(@PathVariable Long slotId, @RequestParam Long candidateId) {
+        try {
+            InterviewSlot bookedSlot = bookingService.bookSlot(slotId, candidateId);
+            return ResponseEntity.ok(bookedSlot);
+        } catch (ObjectOptimisticLockingFailureException e) {
+            // This is the "Proper Error handling" for race conditions 
+            return ResponseEntity.status(409).body("Error: This slot was just taken by someone else.");
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+    @PostMapping("/reschedule")
+    public ResponseEntity<?> reschedule(@RequestParam Long oldSlotId, 
+                                        @RequestParam Long newSlotId, 
+                                        @RequestParam Long candidateId) {
+        try {
+            InterviewSlot newBooking = bookingService.rescheduleSlot(oldSlotId, newSlotId, candidateId);
+            return ResponseEntity.ok(newBooking);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+}
