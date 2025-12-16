@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interview Scheduler Pro</title>
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --secondary: #9333ea;
+            --bg: #f3f4f6;
+            --card-bg: #ffffff;
+            --text-main: #111827;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --error: #ef4444;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text-main);
+            margin: 0;
+            padding: 2rem;
+        }
+
+        .container { max-width: 900px; margin: 0 auto; }
+        
+        /* Control Panel */
+        .controls {
+            background: white; padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); border-left: 5px solid var(--secondary);
+        }
+        .controls .input-group { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+        .controls input { padding: 8px; border: 1px solid #ccc; border-radius: 6px; flex: 1; }
+        
+        .btn-action { background-color: var(--secondary); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+
+        /* Grid & Cards */
+        .slots-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;
+        }
+
+        .card {
+            background: var(--card-bg); border-radius: 12px; padding: 1.5rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #e5e7eb;
+            display: flex; flex-direction: column; justify-content: space-between; position: relative;
+        }
+        
+        /* Highlight card when it's the source of a reschedule */
+        .card.swapping-source { border: 2px solid var(--warning); background-color: #fffbeb; }
+
+        .time-badge { background: #e0e7ff; color: var(--primary); padding: 4px 12px; border-radius: 20px; font-weight: 600; font-size: 0.85rem; }
+
+        /* Buttons */
+        .btn {
+            background-color: var(--primary); color: white; border: none; padding: 10px; border-radius: 8px; font-weight: 600; cursor: pointer; width: 100%; margin-top: 1rem;
+        }
+        .btn:disabled { background-color: #9ca3af; cursor: not-allowed; }
+        
+        .btn-reschedule {
+            background-color: var(--warning); color: white; border: none; padding: 8px; 
+            border-radius: 8px; font-weight: 600; cursor: pointer; width: 100%; margin-top: 10px;
+            display: none; /* Hidden by default */
+        }
+
+        /* Toast */
+        #toast {
+            visibility: hidden; min-width: 250px; background-color: #333; color: #fff; text-align: center; border-radius: 8px; padding: 16px; position: fixed; z-index: 99; left: 50%; bottom: 30px; transform: translateX(-50%);
+        }
+        #toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
+        @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
+        @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="controls">
+        <h2>🛠️ Admin Panel</h2>
+        <div class="input-group">
+            <input type="number" id="interviewerId" placeholder="Interviewer ID (e.g. 1)" value="1">
+            <button class="btn-action" onclick="generateSlots()">Generate Weekly Slots</button>
+        </div>
+    </div>
+
+    <h2 style="margin-bottom: 1rem;">📅 Available Slots</h2>
+    <div id="status-bar" style="background:#fff3cd; color:#856404; padding:10px; border-radius:8px; display:none; margin-bottom:15px; border:1px solid #ffeeba;">
+        🔄 <b>Reschedule Mode:</b> Select any NEW slot to swap with Slot #<span id="swap-source-id"></span>
+    </div>
+
+    <div id="slots-container" class="slots-grid"></div>
+    <button id="load-more-btn" class="btn" style="background:white; color:#333; border:1px solid #ccc;" onclick="loadMore()">Load More Slots</button>
+</div>
+
+<div id="toast">Notification</div>
+
+<script>
+    let lastCursorId = 0;
+    const candidateId = 101; 
+    let activeRescheduleSourceId = null; // Stores the ID of the slot we want to move FROM
+
+    // --- 1. ADMIN: Generate Slots ---
+    async function generateSlots() {
+        const id = document.getElementById('interviewerId').value;
+        showToast("Generating slots...", false);
+        try {
+            const res = await fetch(`/api/slots/generate/${id}`, { method: 'POST' });
+            if (res.ok) {
+                showToast("Success! Slots Generated.", false);
+                lastCursorId = 0; document.getElementById('slots-container').innerHTML = ''; loadMore();
+            } else throw new Error("Failed");
+        } catch (e) { showToast(e.message, true); }
+    }
+
+    // --- 2. LOAD SLOTS ---
+    async function loadMore() {
+        try {
+            const res = await fetch(`/api/slots/available?cursor=${lastCursorId}&limit=6`);
+            const slots = await res.json();
+            
+            if (slots.length === 0) {
+                document.getElementById('load-more-btn').style.display = 'none';
+                return;
+            }
+
+            const container = document.getElementById('slots-container');
+            slots.forEach(slot => {
+                lastCursorId = slot.id;
+                
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.id = `card-${slot.id}`;
+                
+                const date = new Date(slot.startTime).toLocaleString();
+                
+                card.innerHTML = `
+                    <div>
+                        <span class="time-badge">ID: ${slot.id}</span>
+                        <h3>${date}</h3>
+                        <p style="color:#666">Interviewer #${slot.interviewerId}</p>
+                    </div>
+                    
+                    <button id="btn-main-${slot.id}" class="btn" onclick="handleMainAction(${slot.id})">Select Slot</button>
+                    
+                    <button id="btn-reschedule-${slot.id}" class="btn-reschedule" onclick="activateRescheduleMode(${slot.id})">
+                        🔄 Reschedule This
+                    </button>
+                `;
+                container.appendChild(card);
+            });
+        } catch (e) { console.error(e); }
+    }
+
+    // --- 3. LOGIC CONTROLLER ---
+    function handleMainAction(slotId) {
+        if (activeRescheduleSourceId) {
+            // If we are in "Swap Mode", this click means "Swap TO here"
+            performSwap(activeRescheduleSourceId, slotId);
+        } else {
+            // Normal booking
+            performBooking(slotId);
+        }
+    }
+
+    // Step A: User clicks "Book"
+    async function performBooking(slotId) {
+        const btn = document.getElementById(`btn-main-${slotId}`);
+        btn.innerText = "Booking...";
+        
+        try {
+            const res = await fetch(`/api/slots/${slotId}/book?candidateId=${candidateId}`, { method: 'POST' });
+            if (res.ok) {
+                showToast(`Booked Slot #${slotId}!`, false);
+                markSlotAsBooked(slotId);
+            } else throw new Error(await res.text());
+        } catch (e) { showToast(e.message, true); btn.innerText = "Select Slot"; }
+    }
+
+    // Step B: User clicks "Reschedule This" on a booked slot
+    function activateRescheduleMode(slotId) {
+        activeRescheduleSourceId = slotId;
+        
+        // UI Updates to show we are swapping
+        document.getElementById(`card-${slotId}`).classList.add('swapping-source');
+        document.getElementById('status-bar').style.display = 'block';
+        document.getElementById('swap-source-id').innerText = slotId;
+        
+        showToast("Select any NEW slot to swap.", false);
+    }
+
+    // Step C: User clicks a new slot to finalize the swap
+    async function performSwap(oldId, newId) {
+        if (oldId === newId) return; // Can't swap with self
+
+        const newBtn = document.getElementById(`btn-main-${newId}`);
+        newBtn.innerText = "Swapping...";
+        
+        try {
+            const res = await fetch(`/api/slots/reschedule?oldSlotId=${oldId}&newSlotId=${newId}&candidateId=${candidateId}`, { method: 'POST' });
+            if (res.ok) {
+                showToast(`Swapped #${oldId} for #${newId}`, false);
+                
+                // 1. Reset the OLD card (Make it look available again)
+                resetOldCard(oldId);
+
+                // 2. Mark the NEW card as booked
+                markSlotAsBooked(newId);
+
+                // 3. Clear global state
+                activeRescheduleSourceId = null;
+                document.getElementById('status-bar').style.display = 'none';
+            } else throw new Error(await res.text());
+        } catch (e) { 
+            showToast(e.message, true); 
+            newBtn.innerText = "Select Slot"; 
+        }
+    }
+
+    // --- HELPER UI FUNCTIONS ---
+    function markSlotAsBooked(id) {
+        // Change Main Button
+        const mainBtn = document.getElementById(`btn-main-${id}`);
+        mainBtn.innerText = "Booked ✅";
+        mainBtn.disabled = true;
+        
+        // Show Reschedule Button
+        const resBtn = document.getElementById(`btn-reschedule-${id}`);
+        resBtn.style.display = "block";
+    }
+
+    function resetOldCard(id) {
+        const card = document.getElementById(`card-${id}`);
+        if (card) {
+            card.classList.remove('swapping-source');
+            
+            // Reset Main Button
+            const mainBtn = document.getElementById(`btn-main-${id}`);
+            mainBtn.innerText = "Select Slot";
+            mainBtn.disabled = false;
+
+            // Hide Reschedule Button
+            const resBtn = document.getElementById(`btn-reschedule-${id}`);
+            resBtn.style.display = "none";
+        }
+    }
+
+    function showToast(msg, isError) {
+        const t = document.getElementById("toast");
+        t.innerText = msg;
+        t.style.backgroundColor = isError ? "var(--error)" : "var(--success)";
+        t.className = "show";
+        setTimeout(() => t.className = t.className.replace("show", ""), 3000);
+    }
+
+    loadMore();
+</script>
+</body>
+</html>

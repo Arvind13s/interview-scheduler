@@ -16,12 +16,6 @@ public class SlotController {
     @Autowired
     private BookingService bookingService;
 
-    // 1. Get available slots
-    @GetMapping("/available")
-    public List<InterviewSlot> getAvailableSlots() {
-        return bookingService.getAllAvailableSlots();
-    }
-
     @PostMapping("/generate/{interviewerId}")
     public ResponseEntity<String> generateSlots(@PathVariable Long interviewerId) {
         bookingService.generateSlotsForInterviewer(interviewerId);
@@ -51,5 +45,10 @@ public class SlotController {
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
+    }
+    @GetMapping("/available")
+    public List<InterviewSlot> getAvailableSlots(@RequestParam(defaultValue = "0") Long cursor,
+                                                 @RequestParam(defaultValue = "10") int limit) {
+        return bookingService.getAvailableSlotsWithCursor(cursor, limit);
     }
 }

@@ -1,8 +1,8 @@
 package com.interview.scheduler.repository;
-
 import com.interview.scheduler.model.InterviewSlot;
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
+import org.springframework.data.domain.Pageable;
 
 public interface SlotRepository extends JpaRepository<InterviewSlot, Long> {
     // Find all slots for a specific interviewer
@@ -10,4 +10,6 @@ public interface SlotRepository extends JpaRepository<InterviewSlot, Long> {
     
     // Find available slots (for candidate view)
     List<InterviewSlot> findByStatus(String status);
+
+    List<InterviewSlot> findByIdGreaterThanAndStatus(Long cursorId, String status, Pageable pageable);
 }

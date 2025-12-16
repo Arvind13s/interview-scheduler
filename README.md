@@ -40,3 +40,14 @@ The system follows **Clean Architecture** principles to separate concerns:
 ## 6. Testing
 * **Integration Testing:** Added `ConcurrencyTest.java` using `ExecutorService` to simulate multi-threaded user attacks.
 * **Result:** Verified that when 2 threads attempt to book the same slot, exactly 1 succeeds and 1 fails.
+
+## 7. Bonus Features Implementation
+### A. Cursor-Based Pagination
+* **Implementation:** Instead of standard offset pagination (which gets slower as data grows), we implemented **Cursor Pagination**.
+* **Trade-off:** * *Pros:* Extremely fast performance (O(1)) for infinite scroll UIs.
+    * *Cons:* You cannot jump to a specific page number (e.g., "Go to Page 10"), but this is acceptable for a "Load More" style scheduling interface.
+
+### B. UI & Debouncing
+* **UI:** A lightweight HTML/JS frontend located in `src/main/resources/static/index.html`.
+* **Debouncing:** Implemented a custom `debounce()` function in JavaScript.
+    * **Purpose:** If a user frantically clicks the "Book" button, the system only processes the last click after a 500ms delay. This reduces load on the API and prevents accidental double-submissions.

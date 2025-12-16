@@ -9,6 +9,7 @@ import com.interview.scheduler.repository.AvailabilityRepository;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.LocalDateTime;
+import org.springframework.data.domain.PageRequest;
 
 import java.util.List;
 
@@ -113,5 +114,9 @@ public class BookingService {
             
             current = current.plusHours(1);
         }
+    }
+    public List<InterviewSlot> getAvailableSlotsWithCursor(Long cursorId, int limit) {
+        // Fetch 'limit' number of slots that come AFTER the cursorId
+        return slotRepository.findByIdGreaterThanAndStatus(cursorId, "AVAILABLE", PageRequest.of(0, limit));
     }
 }
