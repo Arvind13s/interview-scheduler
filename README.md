@@ -51,3 +51,5 @@ The system follows **Clean Architecture** principles to separate concerns:
 * **UI:** A lightweight HTML/JS frontend located in `src/main/resources/static/index.html`.
 * **Debouncing:** Implemented a custom `debounce()` function in JavaScript.
     * **Purpose:** If a user frantically clicks the "Book" button, the system only processes the last click after a 500ms delay. This reduces load on the API and prevents accidental double-submissions.
+ 
+    * <img width="1901" height="924" alt="Screenshot 2025-12-16 163439" src="https://github.com/user-attachments/assets/396bc839-ce3a-4a73-8219-28c67cf54610" />
