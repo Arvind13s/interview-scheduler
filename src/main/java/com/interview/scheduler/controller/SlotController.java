@@ -49,7 +49,7 @@ public class SlotController {
                                                  @RequestParam(defaultValue = "10") int limit) {
         return bookingService.getAvailableSlotsWithCursor(cursor, limit);
     }
-    
+
     @GetMapping("/booked")
     public List<InterviewSlot> getBookedSlots(@RequestParam(required = false) Long candidateId) {
         if (candidateId != null) {
